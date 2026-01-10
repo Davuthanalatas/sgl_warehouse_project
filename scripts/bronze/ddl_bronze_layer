@@ -2,68 +2,189 @@
 #The bronze layer typically serves as the initial landing zone for raw, unprocessed data before transformation.
 
   
-CREATE OR ALTER PROCEDURE bronze.load_bronze AS 
+IF OBJECT_ID('bronze.load_log', 'U') IS NULL
 BEGIN
-	BEGIN TRY
-
-		TRUNCATE TABLE bronze.crm_cust_info;
-		BULK INSERT bronze.crm_cust_info
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
-
-
-		TRUNCATE TABLE bronze.crm_prd_info;
-		BULK INSERT bronze.crm_prd_info
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
+    CREATE TABLE bronze.load_log (
+        log_id        INT IDENTITY(1,1) PRIMARY KEY,
+        table_name    NVARCHAR(100),
+        rows_loaded   INT,
+        load_status   NVARCHAR(20),
+        error_message NVARCHAR(4000),
+        load_time     DATETIME DEFAULT GETDATE()
+    );
+END;
+GO
 
 
-		TRUNCATE TABLE bronze.crm_sales_details;
-		BULK INSERT bronze.crm_sales_details
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
 
 
-		TRUNCATE TABLE bronze.erp_cust_az12;
-		BULK INSERT bronze.erp_cust_az12
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
 
-		TRUNCATE TABLE bronze.erp_loc_a101;
-		BULK INSERT bronze.erp_loc_a101
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
+CREATE OR ALTER PROCEDURE bronze.load_bronze
+AS
+BEGIN
+    SET NOCOUNT ON;
 
-		TRUNCATE TABLE bronze.erp_px_cat_g1v2;
-		BULK INSERT bronze.erp_px_cat_g1v2
-		FROM 'C:\Users\yakam\OneDrive\Masaüstü\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
-		WITH (
-		FIRSTROW = 2,
-		FIELDTERMINATOR= ',',
-		TABLOCK 
-		);
-	END TRY
-	BEGIN CATCH
-	PRINT 'AN ERROR HAPPEND'+ERROR_MESSAGE()
-	END CATCH
-END
+    DECLARE @rows INT;
+
+    --------------------------------------------------------
+    -- CRM CUSTOMER
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.crm_cust_info;
+
+        BULK INSERT bronze.crm_cust_info
+        FROM 'D:\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.crm_cust_info', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.crm_cust_info', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+    --------------------------------------------------------
+    -- CRM PRODUCT
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.crm_prd_info;
+
+        BULK INSERT bronze.crm_prd_info
+        FROM 'D:\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.crm_prd_info', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.crm_prd_info', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+    --------------------------------------------------------
+    -- CRM SALES
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.crm_sales_details;
+
+        BULK INSERT bronze.crm_sales_details
+        FROM 'D:\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.crm_sales_details', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.crm_sales_details', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+    --------------------------------------------------------
+    -- ERP CUSTOMER
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.erp_cust_az12;
+
+        BULK INSERT bronze.erp_cust_az12
+        FROM 'D:\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.erp_cust_az12', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.erp_cust_az12', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+    --------------------------------------------------------
+    -- ERP LOCATION
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.erp_loc_a101;
+
+        BULK INSERT bronze.erp_loc_a101
+        FROM 'D:\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.erp_loc_a101', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.erp_loc_a101', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+    --------------------------------------------------------
+    -- ERP PRODUCT CATEGORY
+    --------------------------------------------------------
+    BEGIN TRY
+        TRUNCATE TABLE bronze.erp_px_cat_g1v2;
+
+        BULK INSERT bronze.erp_px_cat_g1v2
+        FROM 'D:\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ',',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+
+        SET @rows = @@ROWCOUNT;
+
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status)
+        VALUES ('bronze.erp_px_cat_g1v2', @rows, 'SUCCESS');
+    END TRY
+    BEGIN CATCH
+        INSERT INTO bronze.load_log (table_name, rows_loaded, load_status, error_message)
+        VALUES ('bronze.erp_px_cat_g1v2', 0, 'FAILED', ERROR_MESSAGE());
+    END CATCH;
+
+END;
+GO
+
+EXEC bronze.load_bronze;
+
+
